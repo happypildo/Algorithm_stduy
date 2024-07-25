@@ -36,25 +36,29 @@ is_visited = set()
 stack = Stack()
 stack.push(0)
 
-def DFS(node):
-    global graph
-    global stack
+def DFS(node, stack, is_visited):
+    while not stack.is_empty():
+        node = stack.peek()
+        print(node)
 
-    print(node)
-    
-    is_there_to_go = False
-    for to_go_idx in graph[node]:
-        if to_go_idx not in is_visited:
-            stack.push(to_go_idx)
-            is_visited.add(to_go_idx)
-            DFS(to_go_idx)
-            is_there_to_go = True
+        is_there_to_go = False
+        for to_go in graph[node]:
+            if to_go not in is_visited:
+                is_visited.add(to_go)
+                stack.push(to_go)
+                is_there_to_go = True
+                break
 
-    if not is_there_to_go:
-        stack.pop()
+        while not is_there_to_go and not stack.is_empty():
+            node = stack.pop()
+            for to_go in graph[node]:
+                if to_go not in is_visited:
+                    is_there_to_go = True
+                    stack.push(to_go)
+                    break
       
 start_node_idx = 0
 is_visited.add(start_node_idx)
-DFS(start_node_idx)
+DFS(start_node_idx, stack, is_visited)
 
 print("END")
