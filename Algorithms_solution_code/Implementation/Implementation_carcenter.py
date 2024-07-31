@@ -59,8 +59,6 @@ class CarCenter:
 
     def tik(self):
         # 기다리는 사람들 중 갈 수 있는 사람 모으기
-        if self.simulation_tik == 7:
-            print()
         can_go_people = []
         for key in sorted(self.waiting_in_first.keys()):
             if key <= self.simulation_tik:
@@ -109,12 +107,12 @@ class CarCenter:
 
             # 대기 시간 지우기
             for c_a in self.counterA:
-                if c_a.waiting_person_idx != -1:
+                if c_a.waiting_person_idx != -1 and c_a.waiting_queue > 0:
                     c_a.waiting_queue = c_a.waiting_queue - 1
                     p_idx = c_a.waiting_person_idx
                     self.people[p_idx].processing_time_a = c_a.waiting_queue
             for c_b in self.counterB:
-                if c_b.waiting_person_idx != -1:
+                if c_b.waiting_person_idx != -1 and c_b.waiting_queue > 0:
                     c_b.waiting_queue = c_b.waiting_queue - 1
                     p_idx = c_b.waiting_person_idx
                     self.people[p_idx].processing_time_b = c_b.waiting_queue
@@ -141,13 +139,17 @@ class CarCenter:
                     temp_dict_b[key] = people_idxs[:]
             self.waiting_in_second = temp_dict_b
 
-            if self.waiting_in_first == {} and self.waiting_in_second == {}:
+            end_flag = True
+            for person in self.people:
+                if person.processing_time_a != 0 or person.processing_time_b != 0:
+                    end_flag = False
+
+            if end_flag:
                 return
 
     def check_lost_person(self):
         dup_cnt = 0
         for person in self.people:
-            print(person.number_a, person.number_b)
             if person.number_a == self.lost_person_A - 1 and person.number_b == self.lost_person_B - 1:
                 dup_cnt += person.idx + 1
 
@@ -163,4 +165,4 @@ for t_iter in range(1, T+1):
 
     center = CarCenter(N, M, K, A, B, As, Bs, ts)
     center.simulation_start()
-    print(center.check_lost_person())
+    print(f"#{t_iter} {center.check_lost_person()}")
