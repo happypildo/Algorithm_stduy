@@ -78,3 +78,70 @@ CARDS = [7, 5, 9, 0, 3, 1, 6, 2, 4, 8]
 <br>
 
 ## Quick sorting - 퀵 정렬
+
+> 기준 데이터를 설정하고, 그 기준보다 큰 데이터와 작은 데이터의 위치를 바꿔가며 정렬하는 방식
+
+<br>
+
+### 구체적인 동작 방식
+<br>
+
+- 구체적으로는 <span style="color:orange">**Pivot**</span>을 사용한다. (책에서는 호어 분할(Hoare Partition) 방식을 활용하여 첫번째 데이터를 피벗으로 한다.)
+- Pivot 이 설정되면,
+    - (Pivot 제외) <span style="color:orange">왼쪽부터 Pivot보다 큰 값</span>을 찾고
+    - <span style="color:orange">오른쪽부터 Pivot보다 작은 값</span>을 찾는다.
+    - 그리고 그 것들을 <span style="color:orange">교환</span>한다.
+    
+    > 예시)
+    > [5 7 9 0 3 1 6] 일 때, Pivot은 5이다.
+    > 1. 왼쪽부터 큰 값은 ‘7’, 작은 값은 ‘1’이다.
+    > 2. 이 둘을 교환한 결과는 [5 1 9 0 3 7 6]
+    > 
+
+### 그렇다면, pivot은 언제 옮기나요?
+
+- <span style="color:orange">‘왼쪽’과 ‘오른쪽’ 값이 교차</span>될 경우가 있다.
+    - 앞선 방식을 제대로 수행했다면, <span style="color:orange">**교차 시에는 교차된 값을 기준**</span>으로 <span style="color:orange">***왼쪽은 작은 값들 오른쪽은 큰 값들***</span>이 되게 된다.
+    - 이 때, <span style="color:orange">작은 값과 Pivot값을 바꿔주고, 바뀐 Pivot 값 위치를 기준으로 양쪽을 나눠 다시 진행한다</span>.
+    
+    > 예시)
+    > 위 방식에서 쭉 간다면, [5 1 3 0 9 7 6]이 된다.
+    > 1. 왼쪽에서 간 값은 ‘9’ 이고 오른쪽에서 간 값은 ‘0’이다. 즉, **교차된다**.
+    > 2. 이 때, Pivot 값과 작은 값 ‘0’을 교환한다. [0 1 3 5 9 7 6].
+    > 3. Pivot을 기준으로 배열을 나누고, [0, 1, 3], [9, 7, 6]에 대해 똑같이 진행한다.
+    > 
+
+![책에 나온 예시.](https://prod-files-secure.s3.us-west-2.amazonaws.com/faad244b-bc57-4ada-9bfd-e20cd3691143/e7e6b655-87d1-4ead-99cb-d66f8324be18/Untitled.png)
+
+책에 나온 예시.
+
+### 구현
+
+```python
+CARDS = [7, 5, 9, 0, 3, 1, 6, 2, 4, 8]
+
+def quick_sort(arr):
+    if len(arr) == 0 or len(arr) == 1:
+        return arr
+        
+    pivot = 0
+
+    left = 1
+    right = len(arr) - 1
+    while left < right:
+        while left < len(arr) and arr[left] < arr[pivot]:
+            left = left + 1
+        while right > 0 and arr[right] > arr[pivot]:
+            right = right - 1
+        
+        if left > right:
+            arr[pivot], arr[right] = arr[right], arr[pivot]
+        else:
+            arr[left], arr[right] = arr[right], arr[left]
+    
+    sorted_arr = quick_sort(arr[:right]) + [arr[right]] + quick_sort(arr[right+1:])
+
+    return sorted_arr
+
+print(quick_sort(CARDS))
+```
