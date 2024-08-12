@@ -55,3 +55,15 @@ def quick_sort(arr):
     return sorted_arr
 
 print(quick_sort(CARDS))
+CARDS = [7, 5, 9, 0, 3, 1, 6, 2, 4, 8]
+
+def count_sorting(arr):
+    count_arr = [0 for _ in range(len(arr))]
+
+    for val in arr:
+        count_arr[val] += 1
+
+    return count_arr
+
+for idx, val in enumerate(count_sorting(CARDS)):
+    print(str(idx) * val, end=" ")
