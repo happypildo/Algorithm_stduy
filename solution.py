@@ -1,55 +1,124 @@
-"""
-# 문제 링크
-- https://www.acmicpc.net/problem/1080
+DIRECTION = {
+    'up': [-1, 0],
+    'down': [1, 0],
+    'left': [0, -1],
+    'right': [0, 1]
+}
 
-# 문제 설명
-- 0과 1로만 구성된 행렬 A와 B가 있다. A에 X연산을 진행하여 B를 만들기 위해 몇 번의 연산이 필요한지 출력하라
-- X연산은 3X3 크기의 모든 원소를 뒤집는 것이다 (즉, 0->1, 1->0)
-
-# 접근 방법
-- 완전 탐색이 머릿속에 먼저 나왔으나, 최대 연산 횟수가 2^(50 * 50)이라 다른 방법이 있나 생각해 보았습니다.
-- 모든 점을 하나 씩 순서대로 돌면서 flip의 경우의 수를 셀 때,
-    - 내가 지난 점은 절대 바뀌지 않게 되기에,
-    - 내가 있는 점이 B와 다르다면 무조건 flip해야 한다는 것을 깨달았습니다.
-- 접근은 Greedy를 사용해서 했다고 보면 될 것 같습니다.
-"""
-def flip(A, N, M, i, j):
-    if (-1 < i + 3 - 1 < N) and (-1 < j + 3 - 1 < M):
-        for di in range(3):
-            for dj in range(3):
-                if A[i+di][j+dj] == 1:
-                    A[i+di][j+dj] = 0
-                else:
-                    A[i+di][j+dj] = 1
-        
-        return A, 1
-    else:
-        return A, 0
-
-def greedily_flip(A, B, N, M):
-    ret = 0
-
-    for i in range(N):
-        for j in range(M):
-            if A[i][j] != B[i][j]:
-                A, is_flipped = flip(A, N, M, i, j)
-                ret += is_flipped
-
-    if A == B:
-        return ret
-    else:
+def change_direction(obstacle, direction):
+    if obstacle == -1:
         return -1
+    elif obstacle == 1:
+        if direction == 'up':
+            direction = 'down'
+        elif direction == 'down':
+            direction = 'right'
+        elif direction == 'left':
+            direction = 'up'
+        elif direction == 'right':
+            direction = 'left'
+    elif obstacle == 2:
+        if direction == 'up':
+            direction = 'right'
+        elif direction == 'down':
+            direction = 'up'
+        elif direction == 'left':
+            direction = 'down'
+        elif direction == 'right':
+            direction = 'left'
+    elif obstacle == 3:
+        if direction == 'up':
+            direction = 'left'
+        elif direction == 'down':
+            direction = 'up'
+        elif direction == 'left':
+            direction = 'right'
+        elif direction == 'right':
+            direction = 'down'
+    elif obstacle == 4:
+        if direction == 'up':
+            direction = 'down'
+        elif direction == 'down':
+            direction = 'left'
+        elif direction == 'left':
+            direction = 'right'
+        elif direction == 'right':
+            direction = 'up'
+    elif obstacle == 5:
+        if direction == 'up':
+            direction = 'down'
+        elif direction == 'down':
+            direction = 'up'
+        elif direction == 'left':
+            direction = 'right'
+        elif direction == 'right':
+            direction = 'left'
+
+    return direction
 
 
-N, M = list(map(int, input().split()))
+def move_ball(pin_map, N, x, y, start_position, direction, hole_pair):
+    score = 0
+    already_passed = False
+    while True:
+        if (x, y) in hole_pair and not already_passed:
+            if [x, y] == start_position:
+                break
+            x, y = hole_pair[(x, y)]
+            already_passed = True
+        else:
+            dx, dy = DIRECTION[direction]
+            temp_x = x + dx
+            temp_y = y + dy
 
-A = []
-B = []
-for n_iter in range(N):
-    line = input()
-    A.append([int(x) for x in line])
-for n_iter in range(N):
-    line = input()
-    B.append([int(x) for x in line])
+            if (-1 < temp_x < N) and (-1 < temp_y < N):
+                if pin_map[temp_x][temp_y] == 0:
+                    pass
+                else:
+                    temp_direction = change_direction(pin_map[temp_x][temp_y], direction)
+                    if temp_direction == -1: break      # BLACKHOLE
+                    else: 
+                        direction = temp_direction
+                        score = score + 1
+                x, y = temp_x, temp_y
+            else:
+                direction = change_direction(5, direction)
+                score = score + 1
+                x, y = temp_x, temp_y
 
-print(greedily_flip(A, B, N, M))
+            if [x, y] == start_position:
+                break
+
+            already_passed = False
+    
+    return score
+
+
+def start(pin_map, N, hole_pair):
+    # 핀볼 게임을 임의의 위치에서 진행한다.
+    for x in range(N):
+        for y in range(N):
+            for dir in DIRECTION:
+                print(f"{x, y} - >")
+                print(move_ball(pin_map, N, x, y, [x, y], dir, hole_pair))
+
+
+T = int(input())
+for t_iter in range(1, T+1):
+    N = int(input())
+
+    pin_map = [list(map(int, input().split())) for n_iter in range(N)]
+
+    hole_pair = {}
+    for hole in range(6, 11):
+        pair = set()
+        for i in range(N):
+            for j in range(N):
+                if pin_map[i][j] == hole:
+                    pair.add((i, j))
+        pair = list(pair)
+        if pair:
+            hole_pair[pair[0]] = pair[1]
+            hole_pair[pair[1]] = pair[0]
+        
+    start(pin_map, N, hole_pair)
