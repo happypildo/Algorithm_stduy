@@ -1,3 +1,9 @@
+"""
+# 문제 링크: https://www.acmicpc.net/problem/1013
+# 문제 설명:
+- 문제 참고 하십쇼
+# 접근 방법:
+"""
 N = 200
 
 patterns = {x: set() for x in range(N+10)}
