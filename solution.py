@@ -1,68 +1,67 @@
-# 경로가 유일하지 않은 경우가 있을까?
-import copy 
-fastest_path = ""
-def DFS(source, path_dict, ticket_arr, ticket_dict, travel):
-    global fastest_path
-    if path_dict.get(source, None) is None:
-        # if len(travel) == len(ticket_arr) * 3 * 2:
-        if ticket_dict['visited_tickets'] == 0:
-            if fastest_path > travel:
-                fastest_path = travel
-        return
-    # if len(travel) == len(ticket_arr) * 3 * 2:
-    if ticket_dict['visited_tickets'] == 0:
-        if fastest_path > travel:
-            fastest_path = travel
-        return
+def calculate_line(first_loc, sec_loc):
+    x1, y1 = first_loc
+    x2, y2 = sec_loc
+
+    a = (y2 - y1) / (x2 - x1)
+    b = y1 - a * x1
+
+    return (a, b)
+
+def find_the_poor(locations, target_x):
+    # LEFT
+    left_visibile_building = -1
+    temp_x = target_x
+    while True:
+        temp_x -= 1
+        if 0 > temp_x:
+            break
+        a, b = calculate_line(locations[target_x], locations[temp_x])
+        temp_visible_building = 1
+        for btw_x in range(target_x - 1, temp_x, -1):
+            btw_y = a * btw_x + b
+            real_y = locations[btw_x][1]
+
+            if btw_y > real_y:
+                temp_visible_building += 1
+            else:
+                temp_visible_building -= 1
+                break
+        
+        if left_visibile_building < temp_visible_building:
+            left_visibile_building = temp_visible_building
+    # RIGHT
+    right_visibile_building = -1
+    temp_x = target_x
+    while True:
+        temp_x += 1
+        if len(locations) - 1 < temp_x:
+            break
+        a, b = calculate_line(locations[target_x], locations[temp_x])
+        temp_visible_building = 1
+        for btw_x in range(target_x + 1, temp_x):
+            btw_y = a * btw_x + b
+            real_y = locations[btw_x][1]
+
+            if btw_y > real_y:
+                temp_visible_building += 1
+            else:
+                print("OSS")
+                temp_visible_building -= 1
+                break
+        
+        if right_visibile_building < temp_visible_building:
+            right_visibile_building = temp_visible_building
     
-    if travel > fastest_path:
-        return
-    
-    for destination in path_dict[source]:
-        if ticket_dict[(source, destination)] != 0:
-            temp_ticket_dict = copy.deepcopy(ticket_dict)
-            temp_ticket_dict[(source, destination)] -= 1 
-            temp_ticket_dict['visited_tickets'] -= 1
+    return left_visibile_building + right_visibile_building
 
-            DFS(destination, path_dict, ticket_arr, temp_ticket_dict, travel + f"{source}{destination}")
+X = int(input())
+locations = []
+Y = list(map(int, input().split()))
+for x in range(X):
+    locations.append((x, Y[x]))
 
-
-def solution(tickets):
-    global fastest_path
-
-    path_dict = {}
-    ticket_arr = []
-    ticket_dict = {}
-    for source, destination in tickets:
-        ticket_arr.append((source, destination))
-
-        if ticket_dict.get((source, destination), None) is None:
-            ticket_dict[(source, destination)] = 1
-        else:
-            ticket_dict[(source, destination)] += 1
-        if path_dict.get(source, None) is None:
-            path_dict[source] = [destination]
-        else:
-            path_dict[source].append(destination)
-    ticket_dict["num_of_tickets"] = len(tickets)
-    ticket_dict["visited_tickets"] = len(tickets)
-
-    fastest_path = "a" * ticket_dict["num_of_tickets"] * 3 * 2
-    DFS(source="ICN", path_dict=path_dict, ticket_arr=ticket_arr, ticket_dict=ticket_dict, travel="")
-    
-    # PROCESSING
-    answer = []
-    for offset in range(0, len(fastest_path), 6):
-        answer.append(fastest_path[offset:offset+3])
-    answer.append(fastest_path[-3:])
-
-    return answer
-
-print(solution([["ICN", "JFK"], ["HND", "IAD"], ["JFK", "HND"]]))
-print(solution([["ICN", "SFO"], ["ICN", "ATL"], ["SFO", "ATL"], ["ATL", "ICN"], ["ATL","SFO"], ["SFO", "ICN"]]))
-print(solution([["ICN", "SFO"], ["SFO", "ICN"], ["ICN", "SFO"], ["SFO", "ICN"]]))
-# print(
-#     solution(
-#         [["ICN", "A"], ["ICN", "B"], ["ICN", "C"], ["A", "AA"], ["A", "BB"]]
-#     )
-# )
+results = []
+for x in range(X):
+    results.append(find_the_poor(locations, x))
+    print(results)
+print(max(results))
