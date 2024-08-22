@@ -1,55 +1,39 @@
-fastest_path = ""
-def DFS(source, path_dict, ticket_set, used_ticket, travel):
-    global fastest_path
-    if path_dict.get(source, None) is None:
-        if len(travel) == len(ticket_set) * 3 * 2:
-            if fastest_path > travel:
-                fastest_path = travel
-        return
-    if len(travel) == len(ticket_set) * 3 * 2:
-        if fastest_path > travel:
-            fastest_path = travel
-        return
-    # if travel > fastest_path:
-    #     return
-    
-    for destination in path_dict[source]:
-        if (source, destination) not in used_ticket:
-            temp_used_ticket = used_ticket | set([(source, destination)])
+N, K = list(map(int, input().split()))
 
-            DFS(destination, path_dict, ticket_set, temp_used_ticket, travel + f"{source}{destination}")
+weights = []
+values = []
+for n_iter in range(N):
+    w, v = list(map(int, input().split()))
+    weights.append(w)
+    values.append(v)
 
+sorted_w = sorted(weights)
+sorted_w_idx = sorted(range(len(weights)), key=lambda x: weights[x])
+sorted_v = [values[x] for x in sorted_w_idx]
 
-def solution(tickets):
-    global fastest_path
+# print(sorted_w, sorted_v)
+# print("----------------")
 
-    path_dict = {}
-    ticket_set = set()
-    for source, destination in tickets:
-        ticket_set.add((source, destination))
-        if path_dict.get(source, None) is None:
-            path_dict[source] = [destination]
-        else:
-            path_dict[source].append(destination)
+DP = {x: [0, 0] for x in range(K + 1)} # 무게, 가치
+idx = 0
+for k in range(1, K + 1):
+    # 가방을 비우고 현재 무게로 채우자.
+    first_term = sorted_v[idx] if idx < len(sorted_v) and K >= sorted_w[idx] else -1
 
-    # for key in path_dict.keys():
-    #     path_dict[key] = sorted(path_dict[key])
+    # 새로운 짐을 하나 추가해보자.
+    second_term = DP[k - 1][1] + sorted_v[idx] if idx < len(sorted_v) and DP[k - 1][0] + sorted_w[idx] <= K else -1
 
-    fastest_path = "a" * len(ticket_set) * 3 * 2
-    DFS(source="ICN", path_dict=path_dict, ticket_set=ticket_set, used_ticket=set(), travel="")
-    
-    # PROCESSING
-    answer = []
-    for offset in range(0, len(fastest_path), 6):
-        answer.append(fastest_path[offset:offset+3])
-    answer.append(fastest_path[-3:])
+    # 그냥 가자
+    original_term = DP[k - 1][1]
 
-    return answer
+    if max([first_term, second_term, original_term]) == first_term:
+        DP[k] = [sorted_w[idx], first_term]
+        idx += 1
+    elif max([first_term, second_term, original_term]) == second_term:
+        DP[k] = [DP[k - 1][0] + sorted_w[idx], second_term]
+        idx += 1
+    elif max([first_term, second_term, original_term]) == original_term:
+        DP[k] = DP[k - 1]
+    # print(DP[k])
 
-print(solution([["ICN", "JFK"], ["HND", "IAD"], ["JFK", "HND"]]))
-print(solution([["ICN", "SFO"], ["ICN", "ATL"], ["SFO", "ATL"], ["ATL", "ICN"], ["ATL","SFO"], ["SFO", "ICN"]]))
-# print(
-#     solution(
-#         [["ICN", "A"], ["ICN", "B"], ["ICN", "C"], ["A", "AA"], ["A", "BB"]]
-#     )
-# )
+print(DP[K][1])
