@@ -1,39 +1,64 @@
-N, K = list(map(int, input().split()))
+from collections import deque
 
-weights = []
-values = []
-for n_iter in range(N):
-    w, v = list(map(int, input().split()))
-    weights.append(w)
-    values.append(v)
+DIRECTION = [[-1, 0], [1, 0], [0, -1], [0, 1]]
 
-sorted_w = sorted(weights)
-sorted_w_idx = sorted(range(len(weights)), key=lambda x: weights[x])
-sorted_v = [values[x] for x in sorted_w_idx]
+def BFS(N, M, maze):
+    queue = deque()
+    queue.append((0, 0)) 
+    # False-False 일 때와 False-True일 때만 값이 갱신될 수 있다.
+    price_map = [[float('inf') for m in range(M)] for n in range(N)]
+    price_map_with_broken = [[float('inf') for m in range(M)] for n in range(N)]
+    price_map[0][0] = 0
+    has_broken_map = [[False for m in range(M)] for n in range(N)]
 
-# print(sorted_w, sorted_v)
-# print("----------------")
+    while queue:
+        x, y = queue.popleft()
+        
+        for direction in DIRECTION:
+            dx, dy = direction
+            temp_x, temp_y = x + dx, y + dy
 
-DP = {x: [0, 0] for x in range(K + 1)} # 무게, 가치
-idx = 0
-for k in range(1, K + 1):
-    # 가방을 비우고 현재 무게로 채우자.
-    first_term = sorted_v[idx] if idx < len(sorted_v) and K >= sorted_w[idx] else -1
+            if (-1 < temp_x < N) and (-1 < temp_y < M):
+                if maze[temp_x][temp_y] == '0':
+                    prev_price = price_map[temp_x][temp_y]
+                    incoming_price = price_map[x][y] + 1
 
-    # 새로운 짐을 하나 추가해보자.
-    second_term = DP[k - 1][1] + sorted_v[idx] if idx < len(sorted_v) and DP[k - 1][0] + sorted_w[idx] <= K else -1
+                    prev_price_with_broken = price_map_with_broken[temp_x][temp_y]
 
-    # 그냥 가자
-    original_term = DP[k - 1][1]
+                    if prev_price > prev_price_with_broken > incoming_price:
+                        price_map[temp_x][temp_y] = incoming_price
+                        price_map_with_broken[temp_x][temp_y] = incoming_price
+                        queue.append((temp_x, temp_y))
+                    elif prev_price_with_broken > prev_price > incoming_price:
+                        price_map[temp_x][temp_y] = incoming_price
+                        price_map_with_broken[temp_x][temp_y] = incoming_price
+                        queue.append((temp_x, temp_y))
 
-    if max([first_term, second_term, original_term]) == first_term:
-        DP[k] = [sorted_w[idx], first_term]
-        idx += 1
-    elif max([first_term, second_term, original_term]) == second_term:
-        DP[k] = [DP[k - 1][0] + sorted_w[idx], second_term]
-        idx += 1
-    elif max([first_term, second_term, original_term]) == original_term:
-        DP[k] = DP[k - 1]
-    # print(DP[k])
+                elif maze[temp_x][temp_y] == '1' and price_map_with_broken[temp_x][temp_y] == float('inf'):
+                    prev_price = price_map_with_broken[temp_x][temp_y]
+                    incoming_price = price_map[x][y] + 1
 
-print(DP[K][1])
+                    if prev_price > incoming_price:
+                        price_map_with_broken[temp_x][temp_y] = incoming_price
+                        # queue.append((temp_x, temp_y))
+                elif maze[temp_x][temp_y] == '1' and price_map_with_broken[temp_x][temp_y] != float('inf'):
+                    prev_price = price_map_with_broken[temp_x][temp_y]
+                    incoming_price = price_map[x][y] + 1
+
+                    if prev_price_with_broken > incoming_price:
+                        price_map_with_broken[temp_x][temp_y] = incoming_price
+                        queue.append((temp_x, temp_y))
+
+
+    print(price_map_with_broken)
+    print(price_map)
+    return min(price_map[N-1][M-1] + 1, price_map_with_broken[N-1][M-1] + 1)
+                         
+
+N, M = list(map(int, input().split()))
+
+maze = [input() for n_iter in range(N)]
+
+answer = BFS(N, M, maze)
+answer = -1 if answer == float('inf') else answer
+print(answer)
