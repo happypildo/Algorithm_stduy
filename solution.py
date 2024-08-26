@@ -1,66 +1,37 @@
-from collections import deque
+import decimal
 
-DIRECTION = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+def calculate_(A, B):
+    # (A + B)! / (A! B!)
+    # print(A, B, end = " ")
 
-def BFS(N, M, maze):
-    queue = deque()
-    queue.append((0, 0)) 
+    if A < B:
+        A, B = B, A
+    ret = decimal.Decimal('1')
+    cnt = 0
+    denominator = [i for i in range(1, B+1)]
+    for i in range(A + 1, A + B + 1):
+        ret *= i
+        if cnt < len(denominator):
+            ret /= denominator[cnt]
+            # ret = round(ret)
+            cnt += 1
+    # print(ret)
 
-    queue_for_integ = deque()
+    return ret
+N = int(input())
+num_of_1 = N
+num_of_2 = 0
 
-    
-    price_map = [[float('inf') for m in range(M)] for n in range(N)]                # 벽을 부수지 않고 간 배열
-    price_map_with_broken = [[float('inf') for m in range(M)] for n in range(N)]    # 벽을 단 한 번 부수고 간 배열
-    has_broken = False          # 벽을 한 번이라도 부쉈는지?
-    price_map[0][0] = 0
+answer = 0
 
-    while queue:
-        x, y = queue.popleft()
+while True:
+    if num_of_1 < 0 or num_of_2 < 0:
+        break
+    answer += calculate_(num_of_1, num_of_2)%10007
+    num_of_1 -= 2
+    num_of_2 += 1
+print(int(answer % 10007))
+# print(answer % 10007)
+# if answer != int(answer):
+#     print(i)
 
-        for dx, dy in DIRECTION:
-            temp_x, temp_y = x + dx, y + dy
-            
-            if (-1 < temp_x < N) and (-1 < temp_y < M):
-                if maze[temp_x][temp_y] == '0':
-                    prev_price = price_map[temp_x][temp_y]
-                    incoming_price = price_map[x][y] + 1
-
-                    if prev_price > incoming_price:         # 벽을 부수지 않고 간 배열에 대한 BFS
-                        price_map[temp_x][temp_y] = incoming_price
-                        queue.append((temp_x, temp_y))
-                else:
-                    prev_price = price_map_with_broken[temp_x][temp_y]
-                    incoming_price = price_map[x][y] + 1
-
-                    if prev_price > incoming_price:     # 벽을 연속으로 부술 수 없기 떄문에, queue.append를 하지 않음
-                        price_map_with_broken[temp_x][temp_y] = incoming_price
-                        queue_for_integ.append((temp_x, temp_y))    # 이후, 벽을 부순 것과 부수지 않은 것을 통합하기 위해 queue_for_integ 큐에 삽입
-                        has_broken = True
-    if has_broken:
-        while queue_for_integ:
-            x, y = queue_for_integ.popleft()
-            
-            for dx, dy in DIRECTION:
-                temp_x, temp_y = x + dx, y + dy
-
-                if (-1 < temp_x < N) and (-1 < temp_y < M):
-                    if maze[temp_x][temp_y] == '0':
-                        # 부순 적이 있기 때문에, 0으로만 간다.
-                        prev_price = price_map_with_broken[temp_x][temp_y]
-                        incoming_price = price_map_with_broken[x][y] + 1
-                        if prev_price == float('inf'):
-                            price_map_with_broken[temp_x][temp_y] = incoming_price
-                            queue_for_integ.append((temp_x, temp_y))
-                        elif prev_price > incoming_price:
-                            price_map_with_broken[temp_x][temp_y] = incoming_price
-                            queue_for_integ.append((temp_x, temp_y))
-        return price_map_with_broken[N - 1][M - 1] + 1
-    else:
-        return price_map[N - 1][M - 1] + 1
-
-N, M = list(map(int, input().split()))
-
-maze = [input() for n_iter in range(N)]
-answer = BFS(N, M, maze)
-answer = -1 if answer == float('inf') else answer
-print(answer)
