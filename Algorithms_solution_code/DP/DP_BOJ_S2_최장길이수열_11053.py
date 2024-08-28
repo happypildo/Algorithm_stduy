@@ -6,11 +6,4 @@ for i in range(len(arr)):
     for j in range(i, -1, -1):
         DP[i] = max(DP[i], DP[i - j] + 1 if arr[i - j] < arr[i] else 1)
 
-
 print(max(DP))
-# print(len(included_val))
-
-"""
-7
-10 20 10 30 20 50 10
-"""
