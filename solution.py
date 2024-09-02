@@ -107,43 +107,23 @@ def solve(R, C, forest, orders):
     for idx, order in enumerate(orders):
         col, dir = order
         
-        # print(order)
+        print(order)
         moved = [(1 + dx, col - 1 + dy) for dx, dy in DIRECTION]
 
         while True:
             moved, jud = move_down(R, C, forest, moved)
             if jud: break
         while True:
-            prev_moved = moved[:]
-            while True:
-                moved, dir, jud = turn(R, C, forest, moved, dir, True)
-                if jud: break
-            while True:
-                moved, dir, jud = turn(R, C, forest, moved, dir, False)
-                if jud: break
-            while True:
-                moved, jud = move_down(R, C, forest, moved)
-                if jud: break
-            if prev_moved == moved: break
+            moved, dir, jud = turn(R, C, forest, moved, dir, True)
+            print(moved, dir)
+            if jud: break
+        while True:
+            moved, dir, jud = turn(R, C, forest, moved, dir, False)
+            if jud: break
+        while True:
+            moved, jud = move_down(R, C, forest, moved)
+            if jud: break
 
-        # print(moved)
-        # while True:
-        #     moved, jud = move_down(R, C, forest, moved)
-        #     if jud: break
-        # # print(moved, dir)
-        # while True:
-        #     moved, dir, jud = turn(R, C, forest, moved, dir, True)
-        #     if jud: break
-        # # print(moved, dir)
-        # while True:
-        #     moved, dir, jud = turn(R, C, forest, moved, dir, False)
-        #     if jud: break
-        # # print(moved, dir)
-        # while True:
-        #     moved, jud = move_down(R, C, forest, moved)
-        #     if jud: break
-
-        # print(moved, dir)
         require_reset = False
         
         for x, y in moved:
@@ -162,7 +142,7 @@ def solve(R, C, forest, orders):
                 idx_graph[(x, y)] = idx + 3
                 if i == dir: forest[x][y] = 2
                 else: forest[x][y] = idx + 3
-            # pprint(forest)
+            pprint(forest)
             # print(moved)
             answer += get_lower_bound(R, C, forest, graph, idx_graph, idx + 3)
         
@@ -178,3 +158,10 @@ for _ in range(R):
     
 answer = solve(R, C, forest, orders)
 print(answer)
+
+"""
+5 7 3
+5 1
+6 2
+6 1
+"""
