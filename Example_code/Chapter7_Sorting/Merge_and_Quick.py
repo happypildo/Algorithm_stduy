@@ -42,7 +42,7 @@ def quick_sort(arr):
     right = n - 1
     
     while True:
-        while left <= right and arr[left] < arr[pivot]:
+        while left <= n - 1 and arr[left] < arr[pivot]:
             left += 1
         while right > pivot and arr[right] >= arr[pivot]:
             right -= 1
