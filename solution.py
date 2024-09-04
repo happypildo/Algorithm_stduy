@@ -1,31 +1,80 @@
-DIRECTION = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+path_dict = {}
+rev_path_dict = {}
+visited_set = set()
+rev_visited_set = set()
+def DFS(graph, node, target_node, is_visited, re=False, is_reverse=False):
+    global visited_set
+    global rev_visited_set
+    global path_dict
+    global rev_path_dict
 
-
-def DFS(N, M, input_map, point, current_target, remain_targets, is_visited, depth):
-    ret = 0
-    x, y = point
-    
-    for dx, dy in DIRECTION:
-        temp_x, temp_y = x + dx, y + dy
-        if (-1 < temp_x < N) and (-1 < temp_y < N):
-            if (temp_x, temp_y) not in is_visited and input_map[temp_x][temp_y] == 0 and (temp_x, temp_y) not in remain_targets:
-                # 갈 수 있음
-                temp_is_visited = is_visited | set([(temp_x, temp_y)])
-                if (temp_x, temp_y) == current_target:
-                    if len(remain_targets) == 0: 
-                        ret += 1
-                        continue
-                    ret += DFS(N, M, input_map, (temp_x, temp_y), remain_targets[0], remain_targets[1:], temp_is_visited, depth+1)
+    if node == target_node and not re:
+        if is_reverse:
+            for i in range(len(is_visited)):
+                if rev_path_dict.get(is_visited[i], None) is None:
+                    # i번째 노드로 가면 이렇게 갈 수 있어요!
+                    rev_path_dict[is_visited[i]] = is_visited[i+1:]
                 else:
-                    ret += DFS(N, M, input_map, (temp_x, temp_y), current_target, remain_targets, temp_is_visited, depth)
+                    rev_path_dict[is_visited[i]].append(is_visited[i+1:])
+            rev_visited_set = rev_visited_set | set(is_visited)
+            return True
+        else:
+            for i in range(len(is_visited)):
+                if path_dict.get(is_visited[i], None) is None:
+                    # i번째 노드로 가면 이렇게 갈 수 있어요!
+                    path_dict[is_visited[i]] = is_visited[i+1:]
+                else:
+                    path_dict[is_visited[i]].append(is_visited[i+1:])
+            visited_set = visited_set | set(is_visited)
+            return True
+    if path_dict.get(node, None) is not None and not is_reverse:
+        visited_set = visited_set | set(is_visited)
+        return True
+    if rev_path_dict.get(node, None) is not None and is_reverse:
+        rev_visited_set = rev_visited_set | set(is_visited)
+        return True
+
+    ret = False
+    for neighbor in graph[node]:
+        if neighbor not in is_visited:
+            temp_is_visited = is_visited[:]
+            temp_is_visited.append(neighbor)
+            ret = ret | DFS(graph, neighbor, target_node, temp_is_visited, re, is_reverse)
     return ret
-                 
+
+def reDFS(graph, target_node, dict_key, is_reverse):
+    if is_reverse:
+        for key in dict_key:
+            if key == target_node: continue
+            for neighbor in graph[key]:
+                if neighbor in dict_key: continue
+                else:
+                    if DFS(graph, neighbor, target_node, [], True, is_reverse):
+                        rev_visited_set.add(neighbor)
+    else:
+        for key in dict_key:
+            if key == target_node: continue
+            for neighbor in graph[key]:
+                if neighbor in dict_key: continue
+                else:
+                    if DFS(graph, neighbor, target_node, [], True, is_reverse):
+                        visited_set.add(neighbor)
 
 N, M = list(map(int, input().split()))
 
-input_map = [list(map(int, input().split())) for _ in range(N)]
-orders = [list(map(int, input().split())) for _ in range(M)]
-orders = [(order[0] - 1, order[1] - 1) for order in orders]
+graph = {}
 
-ret = DFS(N, M, input_map, orders[0], orders[1], orders[2:], set([orders[0]]), 1)
-print(ret)
+for _ in range(M):
+    s, e = list(map(int, input().split()))
+    if graph.get(s, None) is None: graph[s] = [e]
+    else: graph[s].append(e)
+
+S, T = list(map(int, input().split()))
+
+DFS(graph, S, T, [S], False, False)
+reDFS(graph, T, set(path_dict.keys()), False)
+
+DFS(graph, T, S, [T], False, True)
+reDFS(graph, S, set(rev_path_dict.keys()), True)
+
+print(len(visited_set & rev_visited_set) - 2)
