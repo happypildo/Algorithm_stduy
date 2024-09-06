@@ -1,80 +1,83 @@
-path_dict = {}
-rev_path_dict = {}
-visited_set = set()
-rev_visited_set = set()
-def DFS(graph, node, target_node, is_visited, re=False, is_reverse=False):
-    global visited_set
-    global rev_visited_set
-    global path_dict
-    global rev_path_dict
+import sys
+sys.setrecursionlimit(10 ** 6)
 
-    if node == target_node and not re:
-        if is_reverse:
-            for i in range(len(is_visited)):
-                if rev_path_dict.get(is_visited[i], None) is None:
-                    # i번째 노드로 가면 이렇게 갈 수 있어요!
-                    rev_path_dict[is_visited[i]] = is_visited[i+1:]
-                else:
-                    rev_path_dict[is_visited[i]].append(is_visited[i+1:])
-            rev_visited_set = rev_visited_set | set(is_visited)
-            return True
-        else:
-            for i in range(len(is_visited)):
-                if path_dict.get(is_visited[i], None) is None:
-                    # i번째 노드로 가면 이렇게 갈 수 있어요!
-                    path_dict[is_visited[i]] = is_visited[i+1:]
-                else:
-                    path_dict[is_visited[i]].append(is_visited[i+1:])
-            visited_set = visited_set | set(is_visited)
-            return True
-    if path_dict.get(node, None) is not None and not is_reverse:
-        visited_set = visited_set | set(is_visited)
-        return True
-    if rev_path_dict.get(node, None) is not None and is_reverse:
-        rev_visited_set = rev_visited_set | set(is_visited)
-        return True
+original_path = [set(), set()]
 
-    ret = False
+
+def DFS(graph, graph_keys, node, start_node, target_node, is_visited, is_work):
+    global original_path
+    
+    if target_node in original_path[is_work]:
+        # 길은 하나 만 알고 있어도 된다.
+        return
+    
+    if node not in graph_keys: return
+    if node in original_path[is_work]: return
+    if node == target_node:
+        original_path[is_work].update(is_visited)
+        original_path[is_work].add(node)
+        return
+        
     for neighbor in graph[node]:
         if neighbor not in is_visited:
-            temp_is_visited = is_visited[:]
-            temp_is_visited.append(neighbor)
-            ret = ret | DFS(graph, neighbor, target_node, temp_is_visited, re, is_reverse)
+            DFS(graph, graph_keys, neighbor, start_node, target_node, is_visited | set([neighbor]), is_work)
+
+    return 
+
+def reDFS(graph, graph_keys, cur_node, start_node, end_node, is_visited, is_work):
+    global original_path
+    
+    # DFS를 돌면서 다시 original path로 회귀할 수 있는지 체크
+    if cur_node in original_path[is_work]:
+        return True
+    
+    ret = False
+    if cur_node not in graph_keys: return False
+    for neighbor in graph[cur_node]:
+        if neighbor in is_visited: continue
+        result = reDFS(graph, graph_keys, neighbor, start_node, end_node, is_visited | set([neighbor]), is_work)
+        if result:
+            original_path[is_work].add(neighbor)
+        ret |= result
+    if ret:
+        original_path[is_work].add(cur_node)
     return ret
+                
+        
 
-def reDFS(graph, target_node, dict_key, is_reverse):
-    if is_reverse:
-        for key in dict_key:
-            if key == target_node: continue
-            for neighbor in graph[key]:
-                if neighbor in dict_key: continue
-                else:
-                    if DFS(graph, neighbor, target_node, [], True, is_reverse):
-                        rev_visited_set.add(neighbor)
-    else:
-        for key in dict_key:
-            if key == target_node: continue
-            for neighbor in graph[key]:
-                if neighbor in dict_key: continue
-                else:
-                    if DFS(graph, neighbor, target_node, [], True, is_reverse):
-                        visited_set.add(neighbor)
+from collections import deque
+def reBFS(graph, graph_keys, start_node, end_node):
+    ret = []
+    for i in [0, 1]:
+        s = start_node if i == 0 else end_node
+        e = end_node if i == 0 else start_node
+        
+        temp_original_path = original_path[i].copy()
+        for path in temp_original_path:
+            if path == e: continue
+            for neighbor in graph[path]:
+                if neighbor not in original_path:
+                    reDFS(graph, graph_keys, neighbor, s, e, set(), i)
 
-N, M = list(map(int, input().split()))
+    return original_path
+    
+
+N, M = map(int,sys.stdin.readline().split())
 
 graph = {}
-
+graph_keys = set()
 for _ in range(M):
-    s, e = list(map(int, input().split()))
-    if graph.get(s, None) is None: graph[s] = [e]
-    else: graph[s].append(e)
+    s, e = map(int,sys.stdin.readline().split())
+    if graph.get(s, None) is None:
+        graph[s] = set([e])
+        graph_keys.add(s)
+    else: 
+        graph[s].add(e)
 
-S, T = list(map(int, input().split()))
+S, T = map(int,sys.stdin.readline().split())
 
-DFS(graph, S, T, [S], False, False)
-reDFS(graph, T, set(path_dict.keys()), False)
+DFS(graph, graph_keys, S, T, T, set([S]), 0)
+DFS(graph, graph_keys, T, S, S, set([T]), 1)
 
-DFS(graph, T, S, [T], False, True)
-reDFS(graph, S, set(rev_path_dict.keys()), True)
-
-print(len(visited_set & rev_visited_set) - 2)
+ret = reBFS(graph, graph_keys, S, T)
+print(len(ret[0] & ret[1]) - 2)
