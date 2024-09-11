@@ -1,5 +1,10 @@
 import heapq
 
+MAX_GRAPH = 2000
+MAX_ID = 30001
+NODES = [False for _ in range(MAX_GRAPH)]
+POSSIBLE_PRODUCTIONS = [False for _ in range(MAX_ID)]
+IS_IN_PRODUCTIONS = [False for _ in range(MAX_ID)]
 
 class Production:
     def __init__(self, p_id, profit, revenue, destination):
@@ -9,6 +14,13 @@ class Production:
         self.destination = destination
 
     def __lt__(self, other):
+        global IS_IN_PRODUCTIONS, POSSIBLE_PRODUCTIONS
+
+        if not POSSIBLE_PRODUCTIONS[self.id]:
+            return False
+        if not POSSIBLE_PRODUCTIONS[other.id]:
+            return True
+
         if self.profit > other.profit:
             return True
         elif self.profit == other.profit:
@@ -19,72 +31,94 @@ class Production:
         else:
             return False
 
+    def __str__(self):
+        return f"PROFIT {self.profit} - ID {self.id}"
 
-def dijkstra(graph_size, graph, start):
-    distances = [float('inf') for _ in range(graph_size)]
-    distances[start] = 0
 
-    min_heap = []
-    heapq.heappush(min_heap, [0, start])
+# def dijkstra(graph_size, graph, start):
+#     distances = [float('inf') for _ in range(MAX_GRAPH)]
+#     distances[start] = 0
+#
+#     min_heap = []
+#     heapq.heappush(min_heap, [0, start])
+#
+#     while min_heap:
+#         dist, node = heapq.heappop(min_heap)
+#
+#         for neighbor, weight in graph[node]:
+#             original_dist = distances[neighbor]
+#             incoming_dist = distances[node] + weight
+#
+#             if incoming_dist < original_dist:
+#                 distances[neighbor] = incoming_dist
+#                 heapq.heappush(min_heap, [incoming_dist, neighbor])
+#
+#     return distances
+def Floyd(graph):
+    distances = [[float('inf') for _ in range(MAX_GRAPH)] for _ in range(MAX_GRAPH)]
 
-    while min_heap:
-        dist, node = heapq.heappop(min_heap)
+    for s in graph.keys():
+        distances[s][s] = 0
+        for e, w in graph[s]:
+            distances[s][e] = w
 
-        for neighbor, weight in graph[node]:
-            original_dist = distances[neighbor]
-            incoming_dist = distances[node] + weight
+    for stopover in range(MAX_GRAPH):
+        if NODES[stopover]:
+            for s in graph.keys():
+                for e in graph.keys():
+                    if s == stopover or e == stopover:
+                        continue
+                    distances[s][e] = min(
+                        distances[s][e],
+                        distances[s][stopover] + distances[stopover][e]
+                    )
 
-            if incoming_dist < original_dist:
-                distances[neighbor] = incoming_dist
-                heapq.heappush(min_heap, [incoming_dist, neighbor])
-    
-    # 서로 같은 경우에 처리
-    
     return distances
 
 
-def make_productions(distances, production_heap, p_id, revenue, destination):
-    cost = distances[destination]
-    profit = revenue - cost
+def make_productions(distances, start, production_heap, p_id, revenue, destination):
+    global POSSIBLE_PRODUCTIONS, IS_IN_PRODUCTIONS
+
+    cost = distances[start][destination]
+    # print(start, destination, distances[start][destination])
+    profit = revenue - cost #f cost != float('inf') else float('inf')
+
     if profit >= 0:
         prod = Production(p_id, profit, revenue, destination)
+        POSSIBLE_PRODUCTIONS[p_id] = True
         heapq.heappush(production_heap, prod)
-        return True
-
-    return False
-
-
-def delete_production(production_heap, is_prod, p_id):
-    if p_id not in is_prod:
-        return False
-
-    popped_prods = []
-
-    while True:
-        if len(production_heap) == 0:
-            return False
-
-        prod = heapq.heappop(production_heap)
-        if prod.id == p_id:
-            break
-        popped_prods.append(prod)
-
-    for prod in popped_prods:
+    else:
+        prod = Production(p_id, profit, revenue, destination)
+        POSSIBLE_PRODUCTIONS[p_id] = False
         heapq.heappush(production_heap, prod)
 
-    return True
+    IS_IN_PRODUCTIONS[p_id] = True
+
+    return production_heap
 
 
-def remake_production(distances, production_heap):
+def delete_production(production_heap, p_id):
+    global IS_IN_PRODUCTIONS, POSSIBLE_PRODUCTIONS
+
+    if not IS_IN_PRODUCTIONS[p_id]:
+        return production_heap
+
+    IS_IN_PRODUCTIONS[p_id] = False
+    POSSIBLE_PRODUCTIONS[p_id] = False
+    heapq.heapify(production_heap)
+
+    return production_heap
+
+
+def remake_production(distances, start, production_heap):
     new_heap = []
-    new_is_product = set()
     heapq.heapify(new_heap)
+
     while production_heap:
         prod = heapq.heappop(production_heap)
-        ret = make_productions(distances, new_heap, prod.id, prod.revenue, prod.destination)
-        if ret:
-            new_is_product.add(prod.id)
-    return new_heap, new_is_product
+        if IS_IN_PRODUCTIONS[prod.id]:
+            new_heap = make_productions(distances, start, new_heap, prod.id, prod.revenue, prod.destination)
+    return new_heap
 
 
 distance_map = None
@@ -95,11 +129,12 @@ graph = {}
 heapq.heapify(prods_heap)
 
 Q = int(input())
-for _ in range(Q):
-
+for q in range(Q):
+    start = 0
     orders = list(map(int, input().split()))
 
     order_num = orders[0]
+    # print(orders)
     if order_num == 100:
         # 그래프 생성
         n, m, *pairs = orders[1:]
@@ -112,29 +147,39 @@ for _ in range(Q):
             graph[v].add((u, w))
             graph[u].add((v, w))
 
-        distance_map = dijkstra(n, graph, 0)
+        # distance_map = dijkstra(n, graph, 0)
+        distance_map = Floyd(graph)
     elif order_num == 200:
         # 상품 생성
         p_id, revenue, destination = orders[1:]
-        ret = make_productions(distance_map, prods_heap, p_id, revenue, destination)
-        if ret:
-            is_product.add(p_id)
+        prods_heap = make_productions(distance_map, start, prods_heap, p_id, revenue, destination)
     elif order_num == 300:
         # 상품 삭제
         p_id = orders[1]
-        ret = delete_production(prods_heap, is_product, p_id)
-        if ret:
-            is_product.remove(p_id)
+        prods_heap = delete_production(prods_heap, p_id)
     elif order_num == 400:
+        # heapq.heapify(prods_heap)
+        # for prod in prods_heap:
+        #     print(f"\t {prod} {IS_IN_PRODUCTIONS[prod.id]} {POSSIBLE_PRODUCTIONS[prod.id]}", end=" / ")
+        # print()
         # 최적 상품 제안
         if len(prods_heap) == 0:
             print(-1)
         else:
-            prod = heapq.heappop(prods_heap)
-            print(prod.id)
+            if POSSIBLE_PRODUCTIONS[prods_heap[0].id]:
+                prod = heapq.heappop(prods_heap)
+                print(prod.id)
+            else:
+                print(-1)
     elif order_num == 500:
         # 출발지 변경
-        new_start = orders[1]
-        distance_map = dijkstra(n, graph, new_start)
-        prods_heap, is_product = remake_production(distance_map, prods_heap)
+        start = orders[1]
+        # distance_map = dijkstra(n, graph, new_start)
+        prods_heap = remake_production(distance_map, start, prods_heap)
         heapq.heapify(prods_heap)
+
+    # print("")
+    # print(orders)
+    # for prod in prods_heap:
+    #     print(f"{prod} {IS_IN_PRODUCTIONS[prod.id]} {POSSIBLE_PRODUCTIONS[prod.id]}", end = " / ")
+    # print("\n-----")
