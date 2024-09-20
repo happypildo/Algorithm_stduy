@@ -30,19 +30,19 @@ class RelicValue:
             return True
         elif self.value < other.value:
             return False
-        
-        # 가치가 같다면, 각도가 작을수록 우선 순위 
+
+        # 가치가 같다면, 각도가 작을수록 우선 순위
         if self.degree < other.degree:
             return True
         elif self.degree > other.degree:
             return False
-        
+
         # 각도가 같다면, 열이 작을수록 우선 순위
         if self.y < other.y:
             return True
         elif self.y > other.y:
             return False
-        
+
         # 열이 같아면, 행이 작을수록 우선 순위
         if self.x < other.x:
             return True
@@ -201,7 +201,7 @@ def repeatedly_search(numbers_on_wall, cnt, relic_map, search_result):
             item = heapq.heappop(min_heap)
             x, y = item.x, item.y
             relic_map[x][y] = numbers_on_wall[cnt]
-            cnt += 1    # 벽에 적힌 순서를 따라가도록 하나 씩 증가
+            cnt += 1  # 벽에 적힌 순서를 따라가도록 하나 씩 증가
 
         # 회전이 없음
         num_of_relics, search_result = bfs_without_replace(loc, relic_map)
@@ -223,14 +223,14 @@ for y in range(RELIC_SIZE - 2, 0, -1):
     for x in range(RELIC_SIZE - 2, 0, -1):
         new_loc = [original_loc[i][:] for i in range(RELIC_SIZE)]
         # 일부분을 가져와 돌린다.
-        partial = [row[y-1:y+2] for row in new_loc[x-1:x+2]]
+        partial = [row[y - 1:y + 2] for row in new_loc[x - 1:x + 2]]
 
         for rot in range(1, 5):
             # 4번 돌리면 원위치가 되기 때문에, 4번 회전한다.
             partial = list(map(list, zip(*partial)))[::-1]
 
-            for _x in range(x-1, x+2):
-                for _y in range(y-1, y+2):
+            for _x in range(x - 1, x + 2):
+                for _y in range(y - 1, y + 2):
                     new_loc[_x][_y] = partial[_x - (x - 1)][_y - (y - 1)]
 
             if rot < 4:
