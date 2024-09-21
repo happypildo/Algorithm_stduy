@@ -1,185 +1,109 @@
-import heapq
+MAX_LANE = 1000000000
 
-MAX_GRAPH = 2000
-MAX_ID = 30001
-NODES = [False for _ in range(MAX_GRAPH)]
-POSSIBLE_PRODUCTIONS = [False for _ in range(MAX_ID)]
-IS_IN_PRODUCTIONS = [False for _ in range(MAX_ID)]
 
-class Production:
-    def __init__(self, p_id, profit, revenue, destination):
-        self.id = p_id
-        self.profit = profit
-        self.revenue = revenue
-        self.destination = destination
+class Customer:
+    def __init__(self, loc, name, target_sushi):
+        self.loc = loc
+        self.name = name
+        self.target_sushi = target_sushi
 
-    def __lt__(self, other):
-        global IS_IN_PRODUCTIONS, POSSIBLE_PRODUCTIONS
 
-        if not POSSIBLE_PRODUCTIONS[self.id]:
-            return False
-        if not POSSIBLE_PRODUCTIONS[other.id]:
-            return True
+class Dish:
+    def __init__(self):
+        # Key: customer name
+        # Value: Is customer alive..
+        self.customer_set = set()
+        self.customer_sushi_count = {}
 
-        if self.profit > other.profit:
-            return True
-        elif self.profit == other.profit:
-            if self.id < other.id:
-                return True
+    def delete(self, name):
+        self.customer_set.discard(name)
+        del self.customer_sushi_count[name]
+
+class Restaurant:
+    def __init__(self, max_lane):
+        # 회전한 위치: 원래 있던 위치
+        self.max_lane = max_lane
+        self.dishes = [Dish() for _ in range(max_lane)]
+        self.customers = []
+
+        self.remain_customers = 0
+        self.remain_sushi = 0
+
+    def customer_sit(self, loc, name, target_sushi):
+        self.customers.append(Customer(loc, name, target_sushi))
+        self.remain_customers += 1
+
+    def customer_eat(self, sim_tik):
+        if len(self.customers) == 0:
+            return
+
+        alive_customers = []
+        for c in self.customers:
+            if c.target_sushi == 0:
+                continue
+
+            c_idx = c.loc
+            d_idx = c_idx - sim_tik + 1
+            while d_idx < 0:
+                d_idx += self.max_lane
+
+            if c.name in self.dishes[d_idx].customer_set:
+                c.target_sushi -= self.dishes[d_idx].customer_sushi_count[c.name]
+                self.remain_sushi -= self.dishes[d_idx].customer_sushi_count[c.name]
+
+                self.dishes[d_idx].delete(c.name)
+
+                if c.target_sushi == 0:
+                    self.remain_customers -= 1
+                else:
+                    alive_customers.append(c)
             else:
-                return False
+                alive_customers.append(c)
+
+        self.customers = alive_customers
+
+    def locate_dish(self, sim_tik, loc, for_who):
+        d_idx = loc - sim_tik + 1
+        while d_idx < 0:
+            d_idx += self.max_lane
+        self.dishes[d_idx].customer_set.add(for_who)
+        if self.dishes[d_idx].customer_sushi_count.get(for_who, None) is None:
+            self.dishes[d_idx].customer_sushi_count[for_who] = 1
         else:
-            return False
-
-    def __str__(self):
-        return f"PROFIT {self.profit} - ID {self.id}"
+            self.dishes[d_idx].customer_sushi_count[for_who] += 1
+        self.remain_sushi += 1
 
 
-# def dijkstra(graph_size, graph, start):
-#     distances = [float('inf') for _ in range(MAX_GRAPH)]
-#     distances[start] = 0
-#
-#     min_heap = []
-#     heapq.heappush(min_heap, [0, start])
-#
-#     while min_heap:
-#         dist, node = heapq.heappop(min_heap)
-#
-#         for neighbor, weight in graph[node]:
-#             original_dist = distances[neighbor]
-#             incoming_dist = distances[node] + weight
-#
-#             if incoming_dist < original_dist:
-#                 distances[neighbor] = incoming_dist
-#                 heapq.heappush(min_heap, [incoming_dist, neighbor])
-#
-#     return distances
-def Floyd(graph):
-    distances = [[float('inf') for _ in range(MAX_GRAPH)] for _ in range(MAX_GRAPH)]
+# 입력 받기
+L, Q = list(map(int, input().split()))
+qs = []
 
-    for s in graph.keys():
-        distances[s][s] = 0
-        for e, w in graph[s]:
-            distances[s][e] = w
+simulation_tik = 1
+q_idx = 0
 
-    for stopover in range(MAX_GRAPH):
-        if NODES[stopover]:
-            for s in graph.keys():
-                for e in graph.keys():
-                    if s == stopover or e == stopover:
-                        continue
-                    distances[s][e] = min(
-                        distances[s][e],
-                        distances[s][stopover] + distances[stopover][e]
-                    )
+restaurant = Restaurant(L)
 
-    return distances
+for _ in range(Q):
+    # qs.append(input().split())
 
+    query = input().split()
 
-def make_productions(distances, start, production_heap, p_id, revenue, destination):
-    global POSSIBLE_PRODUCTIONS, IS_IN_PRODUCTIONS
+    order_type, target_tik = query[0:2]
+    target_tik = int(target_tik)
+    while simulation_tik < target_tik:
+        simulation_tik += 1
+        restaurant.customer_eat(simulation_tik)
 
-    cost = distances[start][destination]
-    # print(start, destination, distances[start][destination])
-    profit = revenue - cost #f cost != float('inf') else float('inf')
-
-    if profit >= 0:
-        prod = Production(p_id, profit, revenue, destination)
-        POSSIBLE_PRODUCTIONS[p_id] = True
-        heapq.heappush(production_heap, prod)
-    else:
-        prod = Production(p_id, profit, revenue, destination)
-        POSSIBLE_PRODUCTIONS[p_id] = False
-        heapq.heappush(production_heap, prod)
-
-    IS_IN_PRODUCTIONS[p_id] = True
-
-    return production_heap
-
-
-def delete_production(production_heap, p_id):
-    global IS_IN_PRODUCTIONS, POSSIBLE_PRODUCTIONS
-
-    if not IS_IN_PRODUCTIONS[p_id]:
-        return production_heap
-
-    IS_IN_PRODUCTIONS[p_id] = False
-    POSSIBLE_PRODUCTIONS[p_id] = False
-    heapq.heapify(production_heap)
-
-    return production_heap
-
-
-def remake_production(distances, start, production_heap):
-    new_heap = []
-    heapq.heapify(new_heap)
-
-    while production_heap:
-        prod = heapq.heappop(production_heap)
-        if IS_IN_PRODUCTIONS[prod.id]:
-            new_heap = make_productions(distances, start, new_heap, prod.id, prod.revenue, prod.destination)
-    return new_heap
-
-
-distance_map = None
-prods_heap = []
-is_product = set()
-n, m = 0, 0
-graph = {}
-heapq.heapify(prods_heap)
-
-Q = int(input())
-for q in range(Q):
-    start = 0
-    orders = list(map(int, input().split()))
-
-    order_num = orders[0]
-    # print(orders)
-    if order_num == 100:
-        # 그래프 생성
-        n, m, *pairs = orders[1:]
-        for i in range(len(pairs) // 3):
-            v, u, w = pairs[i * 3:(i + 1) * 3]
-            if graph.get(v, None) is None:
-                graph[v] = set()
-            if graph.get(u, None) is None:
-                graph[u] = set()
-            graph[v].add((u, w))
-            graph[u].add((v, w))
-
-        # distance_map = dijkstra(n, graph, 0)
-        distance_map = Floyd(graph)
-    elif order_num == 200:
-        # 상품 생성
-        p_id, revenue, destination = orders[1:]
-        prods_heap = make_productions(distance_map, start, prods_heap, p_id, revenue, destination)
-    elif order_num == 300:
-        # 상품 삭제
-        p_id = orders[1]
-        prods_heap = delete_production(prods_heap, p_id)
-    elif order_num == 400:
-        # heapq.heapify(prods_heap)
-        # for prod in prods_heap:
-        #     print(f"\t {prod} {IS_IN_PRODUCTIONS[prod.id]} {POSSIBLE_PRODUCTIONS[prod.id]}", end=" / ")
-        # print()
-        # 최적 상품 제안
-        if len(prods_heap) == 0:
-            print(-1)
-        else:
-            if POSSIBLE_PRODUCTIONS[prods_heap[0].id]:
-                prod = heapq.heappop(prods_heap)
-                print(prod.id)
-            else:
-                print(-1)
-    elif order_num == 500:
-        # 출발지 변경
-        start = orders[1]
-        # distance_map = dijkstra(n, graph, new_start)
-        prods_heap = remake_production(distance_map, start, prods_heap)
-        heapq.heapify(prods_heap)
-
-    # print("")
-    # print(orders)
-    # for prod in prods_heap:
-    #     print(f"{prod} {IS_IN_PRODUCTIONS[prod.id]} {POSSIBLE_PRODUCTIONS[prod.id]}", end = " / ")
-    # print("\n-----")
+    if query[0] == "100":
+        # 초밥 만들어서 위치에 놓기
+        at_loc, name = query[2:]
+        restaurant.locate_dish(simulation_tik, int(at_loc), name)
+        restaurant.customer_eat(simulation_tik)
+    elif query[0] == "200":
+        # 사람 도착
+        at_loc, name, target = query[2:]
+        restaurant.customer_sit(int(at_loc), name, int(target))
+        restaurant.customer_eat(simulation_tik)
+    elif query[0] == "300":
+        # 사진 찍기
+        print(restaurant.remain_customers, restaurant.remain_sushi)
