@@ -1,109 +1,240 @@
-MAX_LANE = 1000000000
+import heapq
+
+DIRECTION = [[1, -1, 0], [2, 0, 1], [3, 1, 0], [4, 0, -1]]
+
+class DistanceNodeSanta:
+    def __init__(self, distance, direction):
+        self.distance = distance
+        self.direction = direction
+
+    def __lt__(self, other):
+        if self.distance < other.distance:
+            return True
+        elif self.distance > other.distance:
+            return False
+
+        if self.direction < other.distance:
+            return True
+        else:
+            return False
 
 
-class Customer:
-    def __init__(self, loc, name, target_sushi):
-        self.loc = loc
-        self.name = name
-        self.target_sushi = target_sushi
+class DistanceNodeRudolph:
+    def __init__(self, dist, r, c, santa_idx):
+        self.dist = dist
+        self.r = r
+        self.c = c
+        self.santa_idx = santa_idx
+
+    def __lt__(self, other):
+        if self.dist < other.dist:
+            return True
+        elif self.dist > other.dist:
+            return False
+
+        if self.r > other.r:
+            return True
+        elif self.r < other.r:
+            return False
+
+        if self.c > other.c:
+            return True
+        else:
+            return False
 
 
-class Dish:
-    def __init__(self):
-        # Key: customer name
-        # Value: Is customer alive..
-        self.customer_set = set()
-        self.customer_sushi_count = {}
+class Game:
+    def __init__(self, map_size, info_of_rudolph, info_of_santa):
+        class Rudolph:
+            def __init__(self, r, c, power):
+                self.r = r
+                self.c = c
+                self.power = power
 
-    def delete(self, name):
-        self.customer_set.discard(name)
-        del self.customer_sushi_count[name]
+        class Santa:
+            def __init__(self, idx, r, c, power):
+                self.idx = idx
+                self.r = r
+                self.c = c
+                self.power = power
+                self.reward = 0
+                self.is_die = False
+                self.is_stun = 0
 
-class Restaurant:
-    def __init__(self, max_lane):
-        # 회전한 위치: 원래 있던 위치
-        self.max_lane = max_lane
-        self.dishes = [Dish() for _ in range(max_lane)]
-        self.customers = []
+        self.map_size = map_size
+        self.rudolph = Rudolph(*info_of_rudolph)
+        self.santas = [Santa(idx, *info) for idx, info in enumerate(info_of_santa)]
 
-        self.remain_customers = 0
-        self.remain_sushi = 0
+        self.loc_of_santas = set()
+        self.loc_dict_of_santas = {}
+        for santa in self.santas:
+            self.loc_of_santas.add((santa.r, santa.c))
+            self.loc_dict_of_santas[(santa.r, santa.c)] = santa.idx
 
-    def customer_sit(self, loc, name, target_sushi):
-        self.customers.append(Customer(loc, name, target_sushi))
-        self.remain_customers += 1
+    def solve(self, num_of_turns):
+        answer = []
+        for turn in range(num_of_turns):
+            ret = 0
+            ret += self.move(False)
+            ret += self.move(True)
+            answer.append(ret)
 
-    def customer_eat(self, sim_tik):
-        if len(self.customers) == 0:
+        return answer
+
+    def interaction(self, target_santa, dx, dy, power):
+        pushed_r, pushed_c = target_santa.r + power * dx, target_santa.c + power * dy
+
+        if (pushed_r < 0 or pushed_r > self.map_size - 1) or (pushed_c < 0 or pushed_c > self.map_size - 1):
+            # 얘 죽음
+            target_santa.is_die = True
+            del self.loc_dict_of_santas[(target_santa.r, target_santa.c)]
+            self.loc_of_santas.discard((target_santa.r, target_santa.c))
             return
 
-        alive_customers = []
-        for c in self.customers:
-            if c.target_sushi == 0:
-                continue
+        if (pushed_r, pushed_c) not in self.loc_of_santas:
+            # 정보 최신화
+            # 날라온 산타가 원래 있던 위치 없애기
+            del self.loc_dict_of_santas[(target_santa.r, target_santa.c)]
+            self.loc_of_santas.discard((target_santa.r, target_santa.c))
+            # 날라온 산타로 정보 대체
+            self.loc_dict_of_santas[(pushed_r, pushed_c)] = target_santa.idx
+            self.loc_of_santas.add((pushed_r, pushed_c))
 
-            c_idx = c.loc
-            d_idx = c_idx - sim_tik + 1
-            while d_idx < 0:
-                d_idx += self.max_lane
+            # 갈 곳에 아무도 없어요
+            target_santa.r = pushed_r
+            target_santa.c = pushed_c
 
-            if c.name in self.dishes[d_idx].customer_set:
-                c.target_sushi -= self.dishes[d_idx].customer_sushi_count[c.name]
-                self.remain_sushi -= self.dishes[d_idx].customer_sushi_count[c.name]
+            return
 
-                self.dishes[d_idx].delete(c.name)
+        pushed_loc = (pushed_r, pushed_c)
+        interacted_santa = self.santas[self.loc_dict_of_santas[pushed_loc]]
 
-                if c.target_sushi == 0:
-                    self.remain_customers -= 1
+        # 정보 최신화
+        # 날라온 산타가 원래 있던 위치 없애기
+        del self.loc_dict_of_santas[(target_santa.r, target_santa.c)]
+        self.loc_of_santas.discard((target_santa.r, target_santa.c))
+        # 날라온 산타로 정보 대체
+        self.loc_dict_of_santas[(interacted_santa.r, interacted_santa.c)] = target_santa.idx
+        self.loc_of_santas.add((interacted_santa.r, interacted_santa.c))
+
+        # 일단 그 곳으로 날라온 산타를 이동시키고
+        target_santa.r = pushed_r
+        target_santa.c = pushed_c
+
+        # 원래 있던 산타 옮기기
+        self.interaction(interacted_santa, dx, dy, 1)
+
+    def move(self, is_santa):
+        if is_santa:
+            reward = 0
+            # 산타 움직이게 하기
+            for santa in self.santas:
+                if santa.is_die:
+                    continue
+                if santa.is_stun > 0:
+                    santa.is_stun -= 1
+
+                s_r, s_c = santa.r, santa.c
+                r_r, r_c = self.rudolph.r, self.rudolph.c
+                min_heap = []
+                for dir, dx, dy in DIRECTION:
+                    distance = (s_r + dx - r_r) ** 2 + (s_c + dy - r_c) ** 2
+                    min_heap.append(DistanceNodeSanta(distance, dir))
+                heapq.heapify(min_heap)
+
+                target_dir = min_heap[0].direction
+
+                if 0 <= min_heap[0].distance <= 2:
+                    reverse_dir = target_dir + 2 if target_dir + 2 < 5 else target_dir -2
+                    santa.reward += santa.power
+                    self.interaction(santa, DIRECTION[reverse_dir][1], DIRECTION[reverse_dir][2], santa.power)
+
+                    reward += santa.power
                 else:
-                    alive_customers.append(c)
-            else:
-                alive_customers.append(c)
-
-        self.customers = alive_customers
-
-    def locate_dish(self, sim_tik, loc, for_who):
-        d_idx = loc - sim_tik + 1
-        while d_idx < 0:
-            d_idx += self.max_lane
-        self.dishes[d_idx].customer_set.add(for_who)
-        if self.dishes[d_idx].customer_sushi_count.get(for_who, None) is None:
-            self.dishes[d_idx].customer_sushi_count[for_who] = 1
+                    santa.reward += 1
+                    reward += 1
+            return reward
         else:
-            self.dishes[d_idx].customer_sushi_count[for_who] += 1
-        self.remain_sushi += 1
+            # 루돌프 움직이기
+            reward = 0
+            min_heap = []
 
+            # 목표로 하는 산타 찾기
+            r, c = self.rudolph.r, self.rudolph.c
+            santa_loc = set()
+            santa_loc_dict = {}
+            for santa in self.santas:
+                santa_loc.add((santa.r, santa.c))
+                santa_loc_dict[(santa.r, santa.c)] = santa.idx
+                distance = (r - santa.r) ** 2 + (c - santa.c) ** 2
+                min_heap.append(DistanceNodeRudolph(distance, santa.r, santa.c, santa.idx))
+            self.loc_of_santas = santa_loc
+            self.loc_dict_of_santas = santa_loc_dict
 
-# 입력 받기
-L, Q = list(map(int, input().split()))
-qs = []
+            heapq.heapify(min_heap)
+            distance = min_heap[0].dist
+            target_santa = self.santas[min_heap[0].santa_idx]
 
-simulation_tik = 1
-q_idx = 0
+            # 해당 산타로 가기 위한 위치 정하기
+            dx, dy = 0, 0
+            if r > target_santa.r:
+                if c == target_santa.c:
+                    # 위로
+                    dx, dy = -1, 0
+                elif c < target_santa.c:
+                    # 우측 상단 대각선
+                    dx, dy = -1, +1
+                elif c > target_santa.c:
+                    # 좌측 상단 대각선
+                    dx, dy = -1, -1
+            elif r < target_santa.r:
+                if c == target_santa.c:
+                    # 아래로
+                    dx, dy = +1, 0
+                elif c < target_santa.c:
+                    # 우측 하단 대각선
+                    dx, dy = 1, 1
+                elif c > target_santa.c:
+                    # 좌측 하단 대각선
+                    dx, dy = 1, -1
+            else:
+                if c == target_santa.c:
+                    # 있을 수 없는 일
+                    pass
+                elif c < target_santa.c:
+                    # 오른쪽
+                    dx, dy = 0, 1
+                elif c > target_santa.c:
+                    # 왼쪽
+                    dx, dy = 0, -1
+                    pass
 
-restaurant = Restaurant(L)
+            self.rudolph.r, self.rudolph.c = self.rudolph.r + dx, self.rudolph.c + dy
 
-for _ in range(Q):
-    # qs.append(input().split())
+            if 0 <= distance <= 2:
+                # 산타와 충돌이 발생했다!
+                target_santa.is_stun = 2
+                target_santa.reward += 2
+                self.interaction(target_santa, dx, dy, self.rudolph.power)
+                reward += self.rudolph.power
 
-    query = input().split()
+            return reward
+"""
+N: 맵 크기
+M: 게임 턴 수
+P: 산타 수
+C: 루돌프의 힘
+D: 산타의 힘
+"""
+N, M, P, C, D = list(map(int, input().split()))
+R_r, R_c = list(map(int, input().split()))
+santa_information = []
+for _ in range(P):
+    S_n, S_r, S_c = list(map(int, input().split()))
+    santa_information.append([S_r, S_c, D])
 
-    order_type, target_tik = query[0:2]
-    target_tik = int(target_tik)
-    while simulation_tik < target_tik:
-        simulation_tik += 1
-        restaurant.customer_eat(simulation_tik)
+game = Game(map_size=N, info_of_rudolph=[R_r, R_c, C], info_of_santa=santa_information)
+game.solve(M)
 
-    if query[0] == "100":
-        # 초밥 만들어서 위치에 놓기
-        at_loc, name = query[2:]
-        restaurant.locate_dish(simulation_tik, int(at_loc), name)
-        restaurant.customer_eat(simulation_tik)
-    elif query[0] == "200":
-        # 사람 도착
-        at_loc, name, target = query[2:]
-        restaurant.customer_sit(int(at_loc), name, int(target))
-        restaurant.customer_eat(simulation_tik)
-    elif query[0] == "300":
-        # 사진 찍기
-        print(restaurant.remain_customers, restaurant.remain_sushi)
+for s in game.santas:
+    print(s.reward)
