@@ -1,55 +1,39 @@
-from itertools import combinations
-from collections import deque
-
-DIRECTION = [[-1, 0], [1, 0], [0, -1], [0, 1]]
-
-
-def BFS(N, M, lab, start_point):
-    is_visited = {start_point, }
-    queue = deque([start_point])
-
-    while queue:
-        x, y = queue.popleft()
-
-        for dx, dy in DIRECTION:
-            temp_x, temp_y = x + dx, y + dy
-            if (-1 < temp_x < N) and (-1 < temp_y < M):
-                if lab[temp_x][temp_y] != 0:
-                    continue
-                if (temp_x, temp_y) in is_visited:
-                    continue
-
-                lab[temp_x][temp_y] = 2
-                queue.append((temp_x, temp_y))
-                is_visited.add((temp_x, temp_y))
-
-    return lab
-
+import heapq
 
 N, M = list(map(int, input().split()))
-lab = [list(map(int, input().split())) for _ in range(N)]
-loc_of_virus = []
-hall = []
-for n in range(N):
-    for m in range(M):
-        if lab[n][m] == 0:
-            hall.append((n, m))
-        elif lab[n][m] == 2:
-            loc_of_virus.append((n, m))
 
-ret = 0
-for comb in combinations(hall, 3):
-    temp_lab = [lab[i][:] for i in range(N)]
-    for w in comb:
-        temp_lab[w[0]][w[1]] = 1
-    for v in loc_of_virus:
-        temp_lab = BFS(N, M, temp_lab, v)
+min_heap = []
+for i in range(N):
+    for j, value in enumerate(list(map(int, input().split()))):
+        heapq.heappush(min_heap, [-1 * value, i, j])
 
-    cnt = 0
-    for i in range(N):
-        for j in range(M):
-            if temp_lab[i][j] == 0:
-                cnt += 1
-    ret = max(ret, cnt)
+answer = 0
+while min_heap:
+    ret = 0
+    selected_nodes = [heapq.heappop(min_heap)]
+    temp_min_heap = min_heap[:]
+    while len(selected_nodes) < 4 and temp_min_heap:
+        val, x1, y1 = heapq.heappop(temp_min_heap)
 
-print(ret)
+        # 기존에 선택된 노드들과 상하좌우로 붙어 있는지 여부 확인
+        can = False
+        for selected in selected_nodes:
+            _, x2, y2 = selected
+
+            if abs(x1 - x2) == 1 and abs(y1 - y2) == 0:
+                can = True
+                break
+            elif abs(x1 - x2) == 0 and abs(y1 - y2) == 1:
+                can = True
+                break
+
+        if can:
+            selected_nodes.append([val, x1, y1])
+
+    if len(selected_nodes) == 4:
+        for val, x, y in selected_nodes:
+            ret += val
+        if answer > ret:
+            answer = ret
+
+print(-1 * answer)
