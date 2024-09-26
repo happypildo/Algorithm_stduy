@@ -1,39 +1,30 @@
-import heapq
+class ChatRoom:
+    def __init__(self, parent_idx, power):
+        self.parent_idx = parent_idx
+        self.power = power
 
-N, M = list(map(int, input().split()))
+        self.child_idx = set()
+        self.is_on = True
 
-min_heap = []
-for i in range(N):
-    for j, value in enumerate(list(map(int, input().split()))):
-        heapq.heappush(min_heap, [-1 * value, i, j])
+class Samsung:
+    def __init__(self, num_of_chatroom, chat_room_info):
+        self.chat_dict = {
+            0: ChatRoom(0, 0)
+        }
 
-answer = 0
-while min_heap:
-    ret = 0
-    selected_nodes = [heapq.heappop(min_heap)]
-    temp_min_heap = min_heap[:]
-    while len(selected_nodes) < 4 and temp_min_heap:
-        val, x1, y1 = heapq.heappop(temp_min_heap)
+        parent_info = chat_room_info[:num_of_chatroom]
+        power_info = chat_room_info[num_of_chatroom:]
 
-        # 기존에 선택된 노드들과 상하좌우로 붙어 있는지 여부 확인
-        can = False
-        for selected in selected_nodes:
-            _, x2, y2 = selected
+        cnt = 1
+        for parent, power in zip(parent_info, power_info):
+            self.chat_dict[cnt] = ChatRoom(parent_idx=parent, power=power)
+            self.chat_dict[parent].child_idx.add(cnt)
+            cnt += 1
 
-            if abs(x1 - x2) == 1 and abs(y1 - y2) == 0:
-                can = True
-                break
-            elif abs(x1 - x2) == 0 and abs(y1 - y2) == 1:
-                can = True
-                break
+    def toggle_onoff(self, num):
+        self.chat_dict[num].is_on = False if self.chat_dict[num].is_on else True
 
-        if can:
-            selected_nodes.append([val, x1, y1])
+    def change_power(self, num, power):
+        self.chat_dict[num].power = power
 
-    if len(selected_nodes) == 4:
-        for val, x, y in selected_nodes:
-            ret += val
-        if answer > ret:
-            answer = ret
-
-print(-1 * answer)
+    def change_parent(self, num1, num2):
