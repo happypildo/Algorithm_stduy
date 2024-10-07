@@ -1,169 +1,176 @@
 from collections import deque
-import heapq
 
 DIRECTION = [
-    [-1, 0], [0, -1], [0, 1], [1, 0]
+    [-1, 0], [1, 0], [0, -1], [0, 1]
 ]
 
 
-class Priority:
-    def __init__(self, dist, x, y, bc):
-        self.dist = dist
-        self.x = x
-        self.y = y
-        self.bc = bc
+class Cluster:
+    def __init__(self, game_map, idx, path):
+        self.idx = idx
+        self.path = path
+        self.path_set = set(path)
 
-    def __lt__(self, other):
-        if self.dist < other.dist:
-            return True
-        elif self.dist > other.dist:
-            return False
-        if self.x < other.x:
-            return True
-        elif self.x > other.x:
-            return False
-        if self.y < other.y:
-            return True
+        self.path_value = [game_map[x][y] for x, y in path]
+        # 방향성 부여
+        idx_of_head = self.path_value.index(1)
+        idx_of_tail = self.path_value.index(3)
+
+        self.direction = 1
+        moving_idx = idx_of_tail + 1
+        if moving_idx == len(path):
+            moving_idx = 0
+        if self.path_value[moving_idx] == 4:
+            # 거꾸로 가야한다.
+            self.direction = -1
+
+        self.numbering = [0 for _ in range(len(self.path))]
+        moving_idx = idx_of_head
+        numbering_idx = 1
+        if self.direction == -1:
+            while True:
+                self.numbering[moving_idx] = numbering_idx
+                numbering_idx += 1
+                moving_idx += 1
+                if moving_idx == len(self.numbering):
+                    moving_idx = 0
+                if self.path_value[moving_idx] == 4:
+                    break
+        elif self.direction == 1:
+            while True:
+                self.numbering[moving_idx] = numbering_idx
+                numbering_idx += 1
+                moving_idx -= 1
+                if moving_idx == 0:
+                    moving_idx = len(self.numbering) - 1
+                if self.path_value[moving_idx] == 4:
+                    break
+
+    def move(self):
+        if self.direction == 1:
+            self.path_value = [self.path_value[-1]] + self.path_value[:-1]
+            self.numbering = [self.numbering[-1]] + self.numbering[:-1]
         else:
-            return False
+            self.path_value = self.path_value[1:] + [self.path_value[0]]
+            self.numbering = self.numbering[1:] + [self.numbering[0]]
+
+    def is_there(self, loc):
+        if loc not in self.path_set:
+            return -1
+
+        line_idx = self.path.index(loc)
+        if self.path_value[line_idx] == 4:
+            return -1
+
+        number = self.numbering[line_idx]
+        self.direction = -1 if self.direction == 1 else 1
+        return number ** 2
 
 
-class Person:
-    def __init__(self, target_conv, curr_point=None):
-        self.curr_point = curr_point
-        self.target_conv = target_conv
-        self.is_activated = False
-        self.is_arrived = False
+def bfs_to_find_path(map_size, start_point, paths, is_visited):
+    queue = deque([start_point])
+    prev_nodes = {start_point: None}
 
+    while queue:
+        x, y = queue.popleft()
 
-class BaseCamp:
-    def __init__(self, loc):
-        self.loc = loc
-        self.is_occupied = False
+        for dx, dy in DIRECTION:
+            temp_x, temp_y = x + dx, y + dy
 
-
-class BreadShop:
-    def __init__(self, N, num_of_people, conv_map, target_convs):
-        self.N = N
-        self.num_of_people = num_of_people
-        self.people = [Person((conv[0] - 1, conv[1] - 1)) for conv in target_convs]
-        self.conv_map = conv_map
-
-        self.all_loc = []
-        self.base_camps = []
-        for i in range(self.N):
-            for j in range(self.N):
-                if self.conv_map[i][j] == 1:
-                    self.base_camps.append(BaseCamp((i, j)))
-
-    def bfs_for_shortest(self, p_idx=None, temp_person=None):
-        if temp_person is None:
-            person = self.people[p_idx]
-        else:
-            person = temp_person
-        point = person.curr_point
-
-        queue = deque([point])
-        prev_nodes = {point: None}
-
-        while queue:
-            x, y = queue.popleft()
-
-            if (x, y) == person.target_conv:
-                break
-
-            for dx, dy in DIRECTION:
-                temp_x, temp_y = x + dx, y + dy
-
-                if (-1 < temp_x < self.N) and (-1 < temp_y < self.N):
-                    if self.conv_map[temp_x][temp_y] == -1 or (temp_x, temp_y) in prev_nodes:
-                        continue
-
-                    queue.append((temp_x, temp_y))
-                    prev_nodes[(temp_x, temp_y)] = (x, y)
-
-        path = []
-        shortest_node = None
-        curr_node = person.target_conv
-        if curr_node not in prev_nodes:
-            return None, None
-
-        while curr_node is not None:
-            if prev_nodes[curr_node] == person.curr_point:
-                shortest_node = curr_node
-            path.append(curr_node)
-            curr_node = prev_nodes[curr_node]
-
-        return shortest_node, path
-
-    def move(self, p_idx):
-        person = self.people[p_idx]
-        target_conv = person.target_conv
-
-        shortest_node, _ = self.bfs_for_shortest(p_idx)
-        person.curr_point = shortest_node
-
-        if person.curr_point == target_conv:
-            # 그 사람을 움직이지 못하게 한다.
-            person.is_arrived = True
-            # 편의점을 못 지나가게 하는 것은 모든 사람의 move가 끝난 이후
-            return True
-        return False
-
-    def select_basecamp(self, p_idx):
-        min_heap = []
-        for bc in self.base_camps:
-            if bc.is_occupied:
+            if (temp_x, temp_y) not in paths:
                 continue
-            target_conv = self.people[p_idx].target_conv
-            _, path = self.bfs_for_shortest(temp_person=Person(target_conv=target_conv, curr_point=tuple(bc.loc)))
-            if path is None:
+            if (temp_x, temp_y) in is_visited:
+                continue
+            if (temp_x, temp_y) in prev_nodes:
                 continue
 
-            min_heap.append(Priority(len(path), *bc.loc, bc))
-        heapq.heapify(min_heap)
+            queue.append((temp_x, temp_y))
+            prev_nodes[(temp_x, temp_y)] = (x, y)
 
-        bc = min_heap[0].bc
-        bc.is_occupied = True
-        self.people[p_idx].curr_point = tuple(bc.loc)
-        self.conv_map[bc.loc[0]][bc.loc[1]] = -1
+    x, y = start_point
+    target_point = -1
+    for dx, dy in DIRECTION:
+        temp_x, temp_y = x + dx, y + dy
 
-    def start(self):
-        tik = 1
-        while True:
-            if tik - 1 < self.num_of_people:
-                self.people[tik - 1].is_activated = True
+        if (temp_x, temp_y) in prev_nodes[::-1]:
+            target_point = (temp_x, temp_y)
+            break
 
-            p_range = min(self.num_of_people, tik - 1)
-            move_result = []
-            for p_idx in range(p_range):
-                if self.people[p_idx].is_arrived:
-                    move_result.append(False)
-                    continue
-                move_result.append(self.move(p_idx))
+    path = [target_point]
+    curr_node = prev_nodes[target_point]
+    while curr_node is not None:
+        path.append(curr_node)
+        curr_node = prev_nodes[curr_node]
 
-            result = []
-            for person in self.people:
-                result.append(person.is_arrived)
-            if sum(result) == self.num_of_people:
-                break
-
-            for idx, result in enumerate(move_result):
-                if result:
-                    c_x, c_y = self.people[idx].target_conv
-                    self.conv_map[c_x][c_y] = -1
-
-            if tik - 1 < self.num_of_people:
-                self.select_basecamp(tik - 1)
-
-            tik += 1
-
-        return tik
+    return path[::-1]
 
 
-n, m = list(map(int, input().split()))
+def dfs_to_find_path(curr_point, paths, is_visited):
+    x, y = curr_point
+    for dx, dy in DIRECTION:
+        temp_x, temp_y = x + dx, y + dy
+
+        if (temp_x, temp_y) not in paths:
+            continue
+        if (temp_x, temp_y) in is_visited:
+            continue
+
+        is_visited.append((temp_x, temp_y))
+        dfs_to_find_path((temp_x, temp_y), paths, is_visited)
+
+
+n, m, k = list(map(int, input().split()))
+
 input_map = [list(map(int, input().split())) for _ in range(n)]
-convs = [list(map(int, input().split())) for _ in range(m)]
+loc_of_paths = set()
+for i in range(n):
+    for j in range(n):
+        if input_map[i][j] != 0:
+            loc_of_paths.add((i, j))
 
-bs = BreadShop(n, len(convs), input_map, convs)
-print(bs.start())
+# 군집 좌표 뽑아내기
+idx = 0
+already_visited = set()
+clusters = []
+for i in range(n):
+    for j in range(n):
+        if (i, j) not in already_visited and input_map[i][j] != 0:
+            found_path = [(i, j)]
+            dfs_to_find_path((i, j), loc_of_paths, found_path)
+            already_visited = already_visited | set(found_path)
+
+            clusters.append(Cluster(input_map, idx, found_path[:]))
+
+# Make ball path
+ball_path = []
+start_loc = [(0, 0)]
+for turn in range(4):
+    for n_iter in range(n):
+        if turn == 0:
+            ball_path.append([(n_iter, j) for j in range(n)])
+        elif turn == 1:
+            ball_path.append([(i, n_iter) for i in range(n)])
+        elif turn == 2:
+            ball_path.append([(n - n_iter - 1, j) for j in range(n - 1, -1, -1)])
+        elif turn == 3:
+            ball_path.append([(i, n - n_iter - 1) for i in range(n - 1, -1, -1)])
+
+answer = 0
+for k_iter in range(k):
+    for c in clusters:
+        c.move()
+
+    ball_round = k_iter % len(ball_path)
+
+    for b_path in ball_path[ball_round]:
+        catched = False
+        for c in clusters:
+            ret = c.is_there(b_path)
+            if ret != -1:
+                answer += ret
+                catched = True
+                break
+        if catched:
+            break
+
+print(answer)
