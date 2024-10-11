@@ -1,169 +1,77 @@
-from itertools import product
-import heapq
-
-MAP_SIZE = 4
-MONSTER_DIRECTION = [
-    [-1, 0], [-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1]
-] # 반시계 순
-PACK_DIRECTION = [
-    [-1, 0], [0, -1], [1, 0], [0, 1]
-] # 우선순위 수
+from itertools import combinations
+from copy import deepcopy
 
 
-class Monster:
-    def __init__(self, x, y, d):
-        self.x = x - 1
-        self.y = y - 1
-        self.d = d - 1
+def find_best(width, height, input_graph, extra_ladders):
+    target = [i for i in range(1, width + 1)]
 
-        # 2는 살아 있음, 1과 0은 시체인 동안, -1일 경우 맵 상에 존재하지 않음
-        self.is_dead = 2
+    ret = ride_ladder(width, height, input_graph)
 
+    judge_arr = [abs(r - t) for r, t in zip(ret, target)]
+    minimum_req = max(judge_arr)
 
-class Packman:
-    class PathPriority:
-        def __init__(self, directions, monsters):
-            self.directions = directions
-            self.monsters = monsters
+    if minimum_req > len(extra_ladders):
+        return -1
+    if minimum_req == 0:
+        return 0
 
-        def __lt__(self, other):
-            if self.monsters > other.monsters:
-                return True
-            elif self.monsters < other.monsters:
-                return False
-            for d1, d2 in zip(self.directions, other.directions):
-                if d1 < d2:
-                    return True
-                elif d1 > d2:
-                    return False
-            return False
-
-    def __init__(self, x, y):
-        self.x = x - 1
-        self.y = y - 1
-
-    def move(self, game_map):
-        max_values = (-1, 5, 5, 5)    # 몬스터 수, 방향 각도
-        for prod in product([0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]):
-            is_possible = True
-
-            temp_x, temp_y = self.x, self.y
-            caught_monsters = set()
-            for direction in prod:
-                dx, dy = PACK_DIRECTION[direction]
-                temp_x, temp_y = temp_x + dx, temp_y + dy
-
-                if (-1 < temp_x < MAP_SIZE) and (-1 < temp_y < MAP_SIZE):
-                    caught_monsters = caught_monsters | set(game_map[temp_x][temp_y][0])
+    for comb_size in range(minimum_req, len(extra_ladders) + 1):
+        for comb in combinations(extra_ladders, comb_size):
+            temp_graph = deepcopy(input_graph)
+            for w, h in comb:
+                if temp_graph.get((w, h), None) is None and temp_graph.get((w + 1, h), None) is None:
+                    temp_graph[(w, h)] = (w + 1, h)
+                    temp_graph[(w + 1, h)] = (w, h)
                 else:
-                    is_possible = False
                     break
+                ret = ride_ladder(width, height, temp_graph)
+                if ret == target:
+                    return comb_size
 
-            if is_possible:
-                if len(caught_monsters) > max_values[0]:
-                    max_values = (len(caught_monsters), prod[0], prod[1], prod[2])
-                    continue
-                elif len(caught_monsters) < max_values[0]:
-                    continue
-                for d1, d2 in zip(prod, max_values[1:]):
-                    if d1 < d2:
-                        max_values = (len(caught_monsters), prod[0], prod[1], prod[2])
-                        break
-                    elif d1 > d2:
-                        break
-
-        caught_monsters = set()
-        moving_history = []
-        for direction in max_values[1:]:
-            dx, dy = PACK_DIRECTION[direction]
-
-            self.x, self.y = self.x + dx, self.y + dy
-            moving_history.append((self.x, self.y))
-            caught_monsters = caught_monsters | set(game_map[self.x][self.y][0])
-
-        return moving_history, caught_monsters
+    return -1
 
 
-class Game:
-    def __init__(self, num_of_turns, pack, mon):
-        self.num_of_turns = num_of_turns
-        self.packman = Packman(*pack)
-        self.monsters = [Monster(*m) for m in mon]
+def ride_ladder(width, height, target_graph):
+    result = []
 
-        # 0번째는 살아 있는, 첫번째는 시체
-        self.game_map = [
-            [
-                [[], 0] for _ in range(MAP_SIZE)
-            ] for _ in range(MAP_SIZE)
-        ]
-        for m in self.monsters:
-            self.game_map[m.x][m.y][0].append(m)
+    for w in range(1, width+1):
+        curr_point = (w, 0)
+        is_visited = {(w, 0)}
 
-    def play(self):
-        for tik in range(self.num_of_turns):
-            # 몬스터 복제 시도 & 몬스터 이동
-            new_game_map = [[[] for _ in range(MAP_SIZE)] for _ in range(MAP_SIZE)]
-            newly_born = []
-            for i in range(MAP_SIZE):
-                for j in range(MAP_SIZE):
-                    for monster in self.game_map[i][j][0]:
-                        # 복제 기릿
-                        newly_born.append(Monster(monster.x + 1, monster.y + 1, monster.d + 1))
+        # 재귀로 돌려봐서 메모리 에러가 발생하는지 확인하자.
+        while curr_point[1] != height + 1:
+            if target_graph[curr_point] is None:
+                curr_point = (curr_point[0], curr_point[1] + 1)
+            elif target_graph[curr_point] in is_visited:
+                curr_point = (curr_point[0], curr_point[1] + 1)
+            else:
+                curr_point = target_graph[curr_point]
 
-                        # 이동 기릿
-                        cnt = 0
-                        while True:
-                            temp_x = monster.x + MONSTER_DIRECTION[monster.d][0]
-                            temp_y = monster.y + MONSTER_DIRECTION[monster.d][1]
+            is_visited.add(curr_point)
 
-                            if (-1 < temp_x < MAP_SIZE) and (-1 < temp_y < MAP_SIZE):
-                                if self.game_map[temp_x][temp_y][1] == 0 and ((temp_x, temp_y) != (self.packman.x, self.packman.y)):
-                                    # 이동 가능
-                                    monster.x, monster.y = temp_x, temp_y
-                                    new_game_map[temp_x][temp_y].append(monster)
-                                    break
-                            monster.d += 1
-                            if monster.d == 8:
-                                monster.d = 0
+        result.append(curr_point[0])
 
-                            cnt += 1
-                            if cnt == 8:
-                                new_game_map[monster.x][monster.y].append(monster)
-                                break
-
-            for i in range(MAP_SIZE):
-                for j in range(MAP_SIZE):
-                    self.game_map[i][j][0] = new_game_map[i][j]
-
-            # 팩맨 이동
-            moving_loc, to_be_body_monsters = self.packman.move(self.game_map)
-
-            # 몬스터 시체 생성 및 소멸
-            for i, j in moving_loc:
-                if len(self.game_map[i][j][0]) != 0:
-                    self.game_map[i][j][1] = 3
-                self.game_map[i][j][0] = []
-
-            for i in range(MAP_SIZE):
-                for j in range(MAP_SIZE):
-                    if self.game_map[i][j][1] > 0:
-                        self.game_map[i][j][1] -= 1
-
-            # 복제 완성
-            for mon in newly_born:
-                i, j = mon.x, mon.y
-                self.game_map[i][j][0].append(mon)
+    return result
 
 
-m, t = list(map(int, input().split()))
-p = list(map(int, input().split()))
-ms = [list(map(int, input().split())) for _ in range(m)]
+N, M, H = list(map(int, input().split()))
+graph = {}
+remaining_ladder = set()
+for n_iter in range(1, N+1):
+    for h_iter in range(0, H + 2):
+        graph[(n_iter, h_iter)] = None
 
-game = Game(t, p, ms)
-game.play()
+        # print((n_iter, h_iter))
+        if n_iter < N and (0 < h_iter < H + 1):
+            remaining_ladder.add((n_iter, h_iter))
 
-answer = 0
-for i in range(MAP_SIZE):
-    for j in range(MAP_SIZE):
-        answer += len(game.game_map[i][j][0])
-print(answer)
+for _ in range(M):
+    a, b = list(map(int, input().split()))
+
+    # 이로써, (b, a)와 (b+1, a)는 사용할 수 없는 점이 되어 버렸다.
+    graph[(b, a)] = (b + 1, a)
+    graph[(b + 1, a)] = (b, a)
+
+    remaining_ladder = remaining_ladder - {(b, a), (b + 1, a)}
+
+print(find_best(N, H, graph, remaining_ladder))
