@@ -202,7 +202,7 @@ class Game:
         if is_santa:
             # 산타 움직이게 하기
             for santa in self.santas:
-                # 죽은 산타는 움직이지 안는다.
+                # 죽은 산타는 움직이지 않는다.
                 if santa.is_die:
                     continue
                 # is_stun 값이 0이 아니라면, 기절해 있는 산타다.
