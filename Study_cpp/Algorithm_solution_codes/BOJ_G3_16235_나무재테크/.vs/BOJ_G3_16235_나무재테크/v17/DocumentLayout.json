@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\\uC724\uD544\uB3C4\\OneDrive - \uD55C\uBC2D\uB300\uD559\uAD50\\\uBC14\uD0D5 \uD654\uBA74\\Study_cpp\\Algorithm_solution_codes\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{B7E1575E-B4AA-4355-8990-3419FA037FA9}|BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C.vcxproj|C:\\Users\\\uC724\uD544\uB3C4\\OneDrive - \uD55C\uBC2D\uB300\uD559\uAD50\\\uBC14\uD0D5 \uD654\uBA74\\Study_cpp\\Algorithm_solution_codes\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\code.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{B7E1575E-B4AA-4355-8990-3419FA037FA9}|BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C.vcxproj|solutionrelative:BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\code.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "code.cpp",
+              "DocumentMoniker": "C:\\Users\\\uC724\uD544\uB3C4\\OneDrive - \uD55C\uBC2D\uB300\uD559\uAD50\\\uBC14\uD0D5 \uD654\uBA74\\Study_cpp\\Algorithm_solution_codes\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\code.cpp",
+              "RelativeDocumentMoniker": "BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\code.cpp",
+              "ToolTip": "C:\\Users\\\uC724\uD544\uB3C4\\OneDrive - \uD55C\uBC2D\uB300\uD559\uAD50\\\uBC14\uD0D5 \uD654\uBA74\\Study_cpp\\Algorithm_solution_codes\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\code.cpp",
+              "RelativeToolTip": "BOJ_G3_16235_\uB098\uBB34\uC7AC\uD14C\uD06C\\code.cpp",
+              "ViewState": "AgIAAD8AAAAAAAAAAAAAAAoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-02-05T12:20:47.737Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
